@@ -56,25 +56,36 @@ def find_parent_txns(fees_sorted_txns):
     return child_parent_rel
 
 
+def if_p_txn_exists_before(observed_txns, parent_txns):
+    """Returns True/False based on whether parent_txns exist in the observed txns so far"""
+    return parent_txns.issubset(observed_txns)
+
+
+def return_p_txns_frm_list(txns, child_parent_rel):
+    """Returns list of parent transactions for a corresponding list of txn IDs"""
+    parent_txns = []
+    for _ in txns:
+        if child_parent_rel[_] != None:
+            parent_txns + child_parent_rel[_].split(";")
+    return parent_txns
+
+
 def find_parent_txn_loc(fees_sorted_txns, child_parent_rel):
     """Returns list of candidate transactions whose parents fall before them in a fees sorted transaction mempool list"""
     observed_txns = set()
-    candidate_txns = []
+    candidate_txns_w_p = []
     for txn in fees_sorted_txns:
         txn_id = get_id(txn)
         observed_txns.add(txn_id)
         parent_txns = child_parent_rel[txn_id]
         if parent_txns != None:
-            count = 0
-            for p_txn in parent_txns.split(";"):
-                if p_txn in observed_txns:
-                    continue
-                else:
-                    count = 1
-                    break
-            if count == 0:
-                candidate_txns.append(txn_id)
-    return candidate_txns
+            if if_p_txn_exists_before(observed_txns, set(parent_txns.split(";"))):
+                second_lvl_parents = return_p_txns_frm_list(
+                    parent_txns.split(";"), child_parent_rel
+                )
+                if if_p_txn_exists_before(observed_txns, set(second_lvl_parents)):
+                    candidate_txns_w_p.append(txn_id)
+    return candidate_txns_w_p
 
 
 def find_candidate_txns(
@@ -115,7 +126,9 @@ if __name__ == "__main__":
     fees_sorted_txns = sort_csv(csv_reader)
     child_parent_rel = find_parent_txns(fees_sorted_txns)
     candidate_txns_w_p = find_parent_txn_loc(fees_sorted_txns, child_parent_rel)
+    print(candidate_txns_w_p)
     candidate_txns, block_wgt = find_candidate_txns(
         fees_sorted_txns, candidate_txns_w_p, child_parent_rel
     )
+    print(block_wgt)
     write_txns(candidate_txns)
