@@ -96,6 +96,7 @@ def check_order_of_transactions(child_parent_rel, block_list):
 
 
 def check_duplicate_transactions(block_list):
+    """Test case to check if there are duplicate transactions in the block"""
     block_list_set = set(block_list)
     if len(block_list_set) == len(block_list):
         return True

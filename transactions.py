@@ -29,7 +29,7 @@ def get_parent_txns(txn):
 def parse_mempool(file_name):
     """Returns a CSV Reader object after parsing mempool.csv file and skips the header"""
     file_contents = open(file_name)
-    next(file_contents, None)
+    next(file_contents, None)  # Dropping the column names
     return csv.reader(file_contents, delimiter=",")
 
 
@@ -92,10 +92,14 @@ def find_candidate_txns(
             parent_txns = find_all_parent_txns(txn_id, child_parent_rel)
             if block_wgt < max_wgt:
                 s = set(candidate_txns)
-                diff = [txn for txn in parent_txns if txn not in s]
+                diff = [
+                    txn for txn in parent_txns if txn not in s
+                ]  # Check if the txns are already in the candidate block list
                 for _ in diff:
                     block_wgt += txn_weights[_]
-                if block_wgt < max_wgt:
+                if (
+                    block_wgt < max_wgt
+                ):  # if block weight is more than max weight, abort the entire parent child chain
                     candidate_txns = candidate_txns + diff
                 else:
                     break
@@ -104,7 +108,9 @@ def find_candidate_txns(
         else:
             if block_wgt < max_wgt:
                 s = set(candidate_txns)
-                if txn_id not in s:
+                if (
+                    txn_id not in s
+                ):  # Check if the txn is already in the candidate block list
                     candidate_txns.append(txn_id)
                     block_wgt += get_weight(txn)
             else:
