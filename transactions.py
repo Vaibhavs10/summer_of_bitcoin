@@ -56,56 +56,54 @@ def find_parent_txns(fees_sorted_txns):
     return child_parent_rel
 
 
+def return_txn_weight_dict(fees_sorted_txns):
+    """Returns a dictionary of all transactions and their corresponding weights"""
+    txn_weights = {}
+    for txn in fees_sorted_txns:
+        txn_weights[txn[0]] = int(txn[2])
+    return txn_weights
+
+
 def if_p_txn_exists_before(observed_txns, parent_txns):
     """Returns True/False based on whether parent_txns exist in the observed txns so far"""
     return parent_txns.issubset(observed_txns)
 
 
-def return_p_txns_frm_list(txns, child_parent_rel):
-    """Returns list of parent transactions for a corresponding list of txn IDs"""
-    parent_txns = []
-    for _ in txns:
-        if child_parent_rel[_] != None:
-            parent_txns + child_parent_rel[_].split(";")
-    return parent_txns
-
-
-def find_parent_txn_loc(fees_sorted_txns, child_parent_rel):
-    """Returns list of candidate transactions whose parents fall before them in a fees sorted transaction mempool list"""
-    observed_txns = set()
-    candidate_txns_w_p = []
-    for txn in fees_sorted_txns:
-        txn_id = get_id(txn)
-        observed_txns.add(txn_id)
-        parent_txns = child_parent_rel[txn_id]
-        if parent_txns != None:
-            if if_p_txn_exists_before(observed_txns, set(parent_txns.split(";"))):
-                second_lvl_parents = return_p_txns_frm_list(
-                    parent_txns.split(";"), child_parent_rel
-                )
-                if if_p_txn_exists_before(observed_txns, set(second_lvl_parents)):
-                    candidate_txns_w_p.append(txn_id)
-    return candidate_txns_w_p
+def find_all_parent_txns(txn_id, child_parent_rel):
+    """Recursive function to find and return all parent txns and return them in order to avoid block violations"""
+    if child_parent_rel[txn_id] == None:
+        return []
+    else:
+        parent_txns = []
+        for parent_id in child_parent_rel[txn_id].split(";"):
+            parent_txns.extend(find_all_parent_txns(parent_id, child_parent_rel))
+        parent_txns += child_parent_rel[txn_id].split(";")
+        return parent_txns
 
 
 def find_candidate_txns(
-    fees_sorted_txns, candidate_txns_w_p, child_parent_rel, max_wgt=MAX_WEIGHT
+    fees_sorted_txns, txn_weights, child_parent_rel, max_wgt=MAX_WEIGHT
 ):
     candidate_txns = []
     block_wgt = 0
-    candidate_txns_w_p = set(candidate_txns_w_p)
     for txn in fees_sorted_txns:
         txn_id = get_id(txn)
         if child_parent_rel[txn_id] != "":
-            if txn_id in candidate_txns_w_p:
-                if block_wgt < MAX_WEIGHT:
-                    candidate_txns.append(txn_id)
-                    block_wgt += get_weight(txn)
+            parent_txns = find_all_parent_txns(txn_id, child_parent_rel)
+            if block_wgt < max_wgt:
+                s = set(candidate_txns)
+                diff = [txn for txn in parent_txns if txn not in s]
+                for _ in diff:
+                    block_wgt += txn_weights[_]
+                if block_wgt < max_wgt:
+                    candidate_txns = candidate_txns + diff
                 else:
-                    break  # Max Weight achieved
+                    break
+            else:
+                break  # Max Weight achieved
         else:
-            if block_wgt < max_wgt and int(txn[1]) > 0:
-                candidate_txns.append(txn[0])
+            if block_wgt < max_wgt and int(get_fees(txn)) > 0:
+                candidate_txns.append(txn_id)
                 block_wgt += get_weight(txn)
             else:
                 print("MAX WEIGHT achieved")
@@ -125,10 +123,10 @@ if __name__ == "__main__":
     csv_reader = parse_mempool("mempool.csv")
     fees_sorted_txns = sort_csv(csv_reader)
     child_parent_rel = find_parent_txns(fees_sorted_txns)
-    candidate_txns_w_p = find_parent_txn_loc(fees_sorted_txns, child_parent_rel)
-    print(candidate_txns_w_p)
+    txn_weights = return_txn_weight_dict(fees_sorted_txns)
     candidate_txns, block_wgt = find_candidate_txns(
-        fees_sorted_txns, candidate_txns_w_p, child_parent_rel
+        fees_sorted_txns, txn_weights, child_parent_rel
     )
+    print(len(candidate_txns))
     print(block_wgt)
     write_txns(candidate_txns)
