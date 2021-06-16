@@ -1,6 +1,6 @@
 # Summer of Bitcoin
 
-Submission by [Vaibhav Srivastav](https://de.linkedin.com/in/vaibhavs10, Vaibhav's LinkedIn)
+Submission by (Vaibhav Srivastav)[https://de.linkedin.com/in/vaibhavs10, Vaibhav's LinkedIn]
 
 ## Run Guide
 
