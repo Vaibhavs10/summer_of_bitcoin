@@ -88,7 +88,7 @@ def find_candidate_txns(
     block_wgt = 0
     for txn in fees_sorted_txns:
         txn_id = get_id(txn)
-        if child_parent_rel[txn_id] != "":
+        if child_parent_rel[txn_id] != None:
             parent_txns = find_all_parent_txns(txn_id, child_parent_rel)
             if block_wgt < max_wgt:
                 s = set(candidate_txns)
@@ -102,9 +102,11 @@ def find_candidate_txns(
             else:
                 break  # Max Weight achieved
         else:
-            if block_wgt < max_wgt and int(get_fees(txn)) > 0:
-                candidate_txns.append(txn_id)
-                block_wgt += get_weight(txn)
+            if block_wgt < max_wgt:
+                s = set(candidate_txns)
+                if txn_id not in s:
+                    candidate_txns.append(txn_id)
+                    block_wgt += get_weight(txn)
             else:
                 print("MAX WEIGHT achieved")
                 break
