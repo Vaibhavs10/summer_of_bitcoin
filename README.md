@@ -29,4 +29,5 @@ The focus while building this code was to ensure all the block conditions are me
 ## Further Improvements
 
 There are a lot quadratic lookups throughout the code to check whether all the parents and their parents (and so on) are slotted in before the child transactions, for a large mempool, this would not scale well.
-Possible imporvements could to be to use hashmaps or deques for faster search and access.
+
+Possible improvements could to be to use hashmaps or deques for faster search and access.
